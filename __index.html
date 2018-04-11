@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        video {
+            display: block;
+            width: 50%;
+            height: auto;
+        }
+
+        .timeline {
+            width: 100%;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0);
+            cursor: pointer;
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            bottom: 0;
+        }
+
+        /* Here is the dragger that I will use to move the video
+        * current time forward or backward.
+        * I have added a background color for you to see it
+        * but just remove it in production.
+        */
+
+        .timeline__drag {
+            width: 1px;
+            height: 20px;
+            top: -10px;
+            background-color: transparent;
+            position: absolute;
+            z-index: 2;
+            transform-origin: 0 0;
+        }
+
+        .timeline__progress {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: transparent;
+            transform: scaleX(0);
+            transform-origin: 0 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        button {
+            margin-top: 2em;
+        }
+    </style>
+</head>
+<body>
+
+<video id="video" preload="auto" loop playsinline></video>
+<div class="timeline">
+    <div class="timeline__drag"></div>
+    <span class="timeline__progress"></span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.20.0/utils/Draggable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.20.0/TweenMax.min.js"></script>
+<script>
+    var video = document.getElementsByTagName('video')[0],
+        play = document.getElementsByClassName('video__play')[0],
+        timeline = document.getElementsByClassName('timeline')[0],
+        timelineProgress = document.getElementsByClassName('timeline__progress')[0],
+        drag = document.getElementsByClassName('timeline__drag')[0]
+
+    // Toggle Play / Pause
+    // play.addEventListener('click', togglePlay, false);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://giant.gfycat.com/WarpedBlindIzuthrush.mp4', true);
+    xhr.responseType = 'blob';
+    xhr.onload = function(e) {
+        if (this.status == 200) {
+            console.log("got it");
+            var myBlob = this.response;
+            var vid = (window.webkitURL || window.URL).createObjectURL(myBlob);
+            // myBlob is now the blob that the object URL pointed to.
+            var video = document.getElementById("video");
+            console.log("Loading video into element");
+            video.src = vid;
+        }
+    }
+
+    xhr.send();
+
+    function togglePlay() {
+        if (video.paused) {
+            video.play()
+        } else {
+            video.pause()
+        }
+    }
+
+    // on interaction with video controls
+    video.onplay = function () {
+        TweenMax.ticker.addEventListener('tick', vidUpdate)
+    }
+    video.onpause = function () {
+        TweenMax.ticker.removeEventListener('tick', vidUpdate)
+    }
+    video.onended = function () {
+        TweenMax.ticker.removeEventListener('tick', vidUpdate)
+    }
+
+    // Sync the timeline with the video duration
+    function vidUpdate() {
+        TweenMax.set(timelineProgress, {
+            scaleX: (video.currentTime / video.duration).toFixed(5)
+        })
+        TweenMax.set(drag, {
+            x: (video.currentTime / video.duration * timeline.offsetWidth).toFixed(4)
+        })
+    }
+    var promise
+    // Make the timeline draggable
+    Draggable.create(drag, {
+        type: 'x',
+        trigger: timeline,
+        bounds: timeline,
+        onPress: function (e) {
+            // video.currentTime = this.x / this.maxX * video.duration;
+            // TweenMax.set(this.target, {
+            //     x: this.pointerX - timeline.getBoundingClientRect().left
+            // });
+            // this.update();
+            // var progress = this.x / timeline.offsetWidth;
+            // TweenMax.set(timelineProgress, {
+            //     scaleX: progress
+            // });
+            e.preventDefault()
+        },
+        onDrag: function () {
+            // var max = 50,
+            // offsetWidth = max;
+            var that = this;
+            window.requestAnimationFrame(function () {
+                promise = video.play().then(function (value) {
+                    video.currentTime = that.x / that.maxX * (video.duration)
+                })
+            })
+            console.log("Dragging", video.currentTime)
+            // var progress = this.x / timeline.offsetWidth
+            // TweenMax.set(timelineProgress, {
+            //     scaleX: progress
+            // })
+        },
+        onRelease: function (e) {
+            if(promise)
+                promise.then(function (value) {
+                    video.pause()
+                })
+
+            e.preventDefault()
+        }
+    })
+</script>
+</body>
+</html>
